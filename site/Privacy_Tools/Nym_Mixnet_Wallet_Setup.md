@@ -4,154 +4,162 @@
 
 # Route Zcash Wallet Traffic Over the Nym Mixnet
 
-> Last verified: September 2026
+> Last verified: September 25, 2026
 
-Zcash shielded transactions protect transaction data on-chain, but a wallet still has to communicate over the internet. Network observers can potentially learn metadata such as your IP address, when your wallet connects, and which infrastructure it contacts.
+Zcash shielded transactions protect transaction data on-chain, but wallets still communicate over the internet. Network observers can potentially learn metadata such as your IP address, when your wallet connects, and which infrastructure it contacts.
 
-NymVPN can add a separate layer of network privacy by routing traffic through Nym's network before it reaches public Zcash infrastructure.
+Nym adds a separate network-privacy layer. As of September 2026, the best approach depends on the wallet:
 
-This guide focuses on the safest broadly compatible approach: **run the wallet through the system-level NymVPN tunnel in Mixnet mode**. It also explains why Nym's app-specific SOCKS5 mode should not be assumed to work with every Zcash wallet.
+1. **Prefer a wallet's native Nym integration when it exists.**
+2. Otherwise, use **system-level NymVPN Mixnet/Anonymous mode** so the wallet's network traffic is routed through Nym without depending on wallet-specific proxy support.
 
-For a broader introduction to VPNs and decentralized VPNs, see [VPN & dVPN](./VPN_and_DVPN.md).
+The bounty text referenced `site/Privacy_Tools/Nym_VPN.md`, but that file does not exist on current ZecHub main. The current related ZecHub page is [VPN & dVPN](./VPN_and_DVPN.md).
 
 ## What Nym adds — and what it does not
 
 A shielded Zcash payment and a network privacy tool solve different problems:
 
 - **Zcash shielded pools** protect transaction details on-chain.
-- **NymVPN Mixnet mode** makes it harder to associate your home or mobile IP address and packet timing with the destination service.
-- The public service you contact should see the Nym exit gateway's IP rather than your own.
+- **Nym mixnet routing** is designed to reduce linkability between your real network identity and the service receiving wallet traffic.
+- A destination contacted through a system-level NymVPN tunnel should see a Nym exit rather than your home/mobile IP.
 
-Nym's Mixnet mode currently sends traffic through an entry gateway, three mix-node layers with randomized delays, and an exit gateway. Nym also generates cover traffic to make timing correlation harder.
+Nym's mixnet uses multiple hops, packet mixing, randomized delays, cover traffic, and onion encryption to reduce network-metadata leakage.
 
-Nym does **not** protect against a compromised device, a malicious wallet build, exposed recovery phrases, or information you reveal through transparent Zcash activity or third-party accounts.
+Nym does **not** protect against a compromised device, malicious wallet software, exposed recovery phrases, identity you reveal through exchange accounts, or privacy loss caused by transparent Zcash activity.
 
-## Recommended setup: system-wide NymVPN Mixnet mode
+## Native Nym support: use this first when available
 
-This path requires no special proxy support inside the wallet.
+Nym announced on September 24, 2026 that its Zcash Community Grant work is complete and native mixnet support is shipping in real Zcash wallets.
+
+### Zingo! Wallet / Zingo PC
+
+Zingo PC includes a native Nym transport.
+
+Current behavior documented by Zingo:
+
+- The Nym control is under **Settings → Nym Mixnet**.
+- Sending a payment is routed through the mixnet.
+- Ironwood migration transmissions follow the same protected send path.
+- ZEC price requests are also routed through the mixnet.
+- Sending fails closed while Nym is enabled: if the mixnet transport is unavailable, the payment is not silently sent over clearnet.
+- **Chain synchronization is currently not routed through the mixnet** in Zingo PC. Compact blocks, nullifier queries, transaction fetches, mempool traffic, and server-health checks still use the normal server connection.
+
+That distinction matters: Zingo's native integration protects the highest-linkage broadcast path, but it is not yet a full-device network tunnel.
+
+If your threat model also requires hiding sync traffic from the server, use a system-level privacy tunnel such as NymVPN in addition to understanding the extra latency and complexity this introduces.
+
+Sources:
+
+- https://github.com/zingolabs/zingo-pc
+- https://nym.com/blog/nym-mixnet-zcash-wallets
+
+### Zkool
+
+Nym reports that **Zkool** now supports connecting to Zcash RPC infrastructure over the Nym mixnet using a native toggle.
+
+Zkool is the actively maintained successor to YWallet. Its project also supports Tor proxying and onion services for Zcash server connections.
+
+Prefer Zkool's native Nym option over trying to force an older YWallet build through an undocumented proxy path.
+
+Sources:
+
+- https://nym.com/blog/nym-mixnet-zcash-wallets
+- https://github.com/mladenmarkov/zkool
+
+### Zodl
+
+Zodl currently has built-in **Tor Protection**, not the same native Nym integration described above for Zingo and Zkool.
+
+Zodl's Tor feature can route transaction submission, transaction-data retrieval, exchange-rate requests, and third-party API calls over Tor. Nym stated on September 24, 2026 that it is still in active conversation with the Zodl team about broader mixnet integration.
+
+For Zodl today, use either:
+
+- Zodl's documented Tor Protection, or
+- system-level NymVPN if your goal is to route the wallet's general device traffic through Nym.
+
+Do not assume Tor and Nym are interchangeable transports inside the wallet simply because both are privacy networks.
+
+Zodl Tor settings:
+
+**More → Advanced Features → Beta: Tor Protection → Enable → Save changes**
+
+Sources:
+
+- https://support.zodl.com/article/17-enabling-tor-protection
+- https://nym.com/blog/nym-mixnet-zcash-wallets
+
+## Fallback: system-level NymVPN
+
+This is the most broadly compatible Nym option because it does not require the wallet to understand Nym-specific proxy settings.
 
 ### 1. Install NymVPN
 
-Download NymVPN only from Nym's official site or the platform's official app store.
-
-Official NymVPN information and downloads:
+Download NymVPN only from Nym's official website or an official platform store:
 
 - https://nym.com/
-- https://nym.com/blog/nymvpn-v2026.11
+- https://nym.com/blog/nymvpn-v2026.12
 
 NymVPN supports Android, iOS, Linux, Windows, and macOS.
 
-### 2. Connect in Mixnet mode
+### 2. Select Anonymous / Mixnet mode
 
-Open NymVPN and select **Mixnet mode**.
+NymVPN has a lower-latency mode and a stronger anonymous/mixnet route. For the strongest network-metadata protection, use the Anonymous/Mixnet option and wait until the client reports that the connection is established before opening or refreshing the wallet.
 
-NymVPN also offers a faster two-hop mode. That mode can still hide your home IP from the destination, but it does not use the same multi-hop mixing and timing-delay design as Mixnet mode.
+### 3. Leave the wallet on normal network settings
 
-Wait until NymVPN reports that the connection is established before opening or refreshing your wallet.
-
-### 3. Leave the wallet on its normal network settings
-
-For most Zcash wallets, no wallet-side proxy configuration is required when the operating system is already routing traffic through NymVPN.
+When the operating system is already tunneling traffic through NymVPN, most wallets do not need custom proxy settings.
 
 Open the wallet normally and allow it to sync.
 
-On platforms where NymVPN exposes split tunneling, make sure the wallet is **included in the protected tunnel**, not placed on a bypass/exclusion list.
+If NymVPN exposes split tunneling on your platform, confirm that the wallet is **included in the protected tunnel**, not placed on a bypass or exclusion list.
 
-### 4. Verify the tunnel before sending funds
+### 4. Verify the tunnel before using the wallet
 
-A simple check verifies that the operating system's default internet path changed:
+A simple system-level check:
 
 1. Disconnect NymVPN.
-2. Visit an IP-checking service or run a command such as:
+2. Visit a public IP-checking service, or on desktop run:
 
    ```bash
    curl https://api.ipify.org
    ```
 
-3. Record the visible IP address.
-4. Connect NymVPN in Mixnet mode.
+3. Record the visible IP.
+4. Connect NymVPN in Anonymous/Mixnet mode.
 5. Repeat the check.
 
-The second public IP should be different.
+The visible public IP should change.
 
-This verifies the system tunnel, not the wallet implementation itself. For desktop wallets, an advanced user can additionally inspect active connections with the operating system's network monitor while NymVPN is connected.
+This confirms the system tunnel. It does **not** prove that every request made by a particular wallet follows the same path if the app or OS has special routing rules.
 
-## Zodl (formerly Zashi)
+For more assurance on desktop:
 
-Zodl has its own built-in Tor support in addition to whatever network tunnel the operating system uses.
+- inspect the wallet process with the operating system's network monitor,
+- verify there is no split-tunnel exclusion,
+- confirm expected wallet behavior changes if NymVPN is disconnected.
 
-Zodl's official support documentation states that Tor Protection can route transaction submission, transaction-data retrieval, exchange-rate requests, and third-party API connections over Tor.
+Do not post screenshots containing wallet addresses, balances, transaction IDs, IP addresses, or recovery material while troubleshooting.
 
-Current Zodl Tor instructions:
+## NymVPN dApp / wallet proxy mode
 
-**More → Advanced Features → Beta: Tor Protection → Enable → Save changes**
+NymVPN also exposes an app-and-wallet proxy mode using SOCKS5 / RPC routing through the mixnet.
 
-Source:
+Nym's public setup documentation demonstrates this mainly with Ethereum-style RPC configuration. It is useful for software that explicitly supports a compatible generic proxy/RPC path, but it should **not** be assumed to work with every Zcash wallet.
 
-- https://support.zodl.com/article/17-enabling-tor-protection
+Only use this path when the wallet's own documentation confirms compatible proxy or RPC support.
 
-Zodl also offers the Tor option during wallet recovery/synchronization, and its support documentation warns that Tor can make synchronization slower:
+Otherwise, prefer:
 
-- https://support.zodl.com/article/13-recovering-your-zodl-wallet
-
-### NymVPN plus Zodl
-
-If you use the **system-wide NymVPN Mixnet tunnel**, Zodl does not need a Nym-specific setting.
-
-For a simple and auditable setup, use one network-privacy layer deliberately rather than assuming that stacking Tor and NymVPN always improves privacy. Running Zodl's Tor client inside a NymVPN tunnel can add latency and complexity, and ZecHub has not independently established that this combination provides a meaningful additional benefit.
-
-## YWallet and its successor Zkool
-
-YWallet is a legacy wallet line. Its actively maintained successor, **Zkool**, describes itself as the successor to YWallet and supports Tor proxying and onion services for its Zcash server connections.
-
-Current project:
-
-- https://github.com/mladenmarkov/zkool
-
-For Nym, the recommended approach remains the **system-level NymVPN Mixnet tunnel**, because this does not depend on wallet-specific proxy implementation details.
-
-Do not assume that a field labeled "Tor proxy" is automatically interchangeable with Nym's SOCKS5 mode. A wallet may make Tor-specific assumptions, including onion-service handling.
-
-If you still use an older YWallet build, verify its current networking options and maintenance status before relying on wallet-specific proxy settings.
-
-## About Nym's dApp / wallet SOCKS5 mode
-
-NymVPN also has a dApp/wallet mode that exposes a SOCKS5 path through the mixnet.
-
-Nym's current documentation describes this mode primarily for wallets that can be pointed at a compatible RPC endpoint through SOCKS5, with Ethereum wallets used as the main example:
-
-- https://nym.com/blog/nymvpn-v2026.2
-- https://nym.com/blog/nymvpn-dapp-mode
-
-This can be useful for software that explicitly supports a generic SOCKS5 proxy, but **do not configure a Zcash wallet this way unless that wallet documents compatible SOCKS5 proxy support for its lightwalletd or full-node connections**.
-
-For a Zcash wallet without documented generic SOCKS5 support, use the system-level NymVPN tunnel instead.
-
-## Verifying wallet traffic more carefully
-
-For higher assurance on desktop:
-
-1. Connect NymVPN in Mixnet mode.
-2. Start the wallet.
-3. Confirm that sync begins successfully.
-4. Use the operating system's network monitor to observe the wallet process.
-5. Confirm there is no intentional split-tunnel rule excluding the wallet.
-6. If practical, temporarily disconnect NymVPN and confirm that the wallet's network behavior changes as expected.
-
-Avoid posting screenshots of wallet addresses, balances, transaction IDs, IP addresses, or recovery material while troubleshooting.
+- the wallet's native Nym integration, or
+- system-level NymVPN.
 
 ## Performance and timeout trade-offs
 
-Mixnets intentionally add delay. Nym's documentation explains that Mixnet mode introduces randomized packet delays and cover traffic, while newer Mixnet Tuning controls let users trade some anonymity margin for responsiveness.
+Mixnets intentionally trade speed for stronger metadata protection.
 
-Current Nym explanation:
+Expect possible impact on:
 
-- https://nym.com/docs/network/mixnet-mode/traffic-flow
-- https://nym.com/blog/mixnet-tuning
-
-For Zcash light wallets, this can affect:
-
-- initial synchronization,
+- initial wallet synchronization,
 - large catch-up syncs,
 - transaction-history queries,
 - RPC timeouts,
@@ -159,38 +167,36 @@ For Zcash light wallets, this can affect:
 
 Practical guidance:
 
-- Start with Nym's default Mixnet settings.
-- Expect a first or long catch-up sync to take longer.
-- If a wallet times out once, retry before changing privacy modes.
-- Avoid repeatedly disconnecting and reconnecting immediately before a sensitive transaction.
-- If your threat model allows it, a less private/faster mode can be used for bulk synchronization, then Mixnet mode can be enabled before sensitive activity. Be aware that contacting the same wallet infrastructure outside the mixnet can reveal additional network metadata.
-- If network privacy is the priority, keep the wallet on Mixnet mode and allow more time for synchronization.
+- Start with default Nym settings.
+- Expect first sync or long catch-up sync to take longer.
+- Retry a timeout before weakening privacy settings.
+- Avoid repeatedly switching privacy modes immediately before a sensitive transaction.
+- If you use a faster path for bulk sync, understand that contacted infrastructure may observe your real network identity during that period.
+- For Zingo PC specifically, remember that its native Nym transport currently protects sends and price lookup, while synchronization remains direct.
 
 ## Mobile considerations
 
-On Android and iOS, the system VPN slot is normally the simplest way to protect wallet traffic: connect NymVPN first, then use the wallet.
+On Android and iOS, the operating system VPN slot is usually the simplest way to route general wallet traffic through NymVPN: connect NymVPN first, then open the wallet.
 
-If another VPN, firewall, or local VPN-based ad blocker already occupies the system VPN interface, the two products may not be able to operate simultaneously. Check the operating system's VPN status before assuming the wallet is protected.
+If another VPN, firewall, or local VPN-based ad blocker already occupies the system VPN interface, the two products may not be able to operate simultaneously. Confirm the operating system's VPN status before assuming the wallet is protected.
 
 ## Threat-model checklist
 
-Before relying on this setup, ask:
+Before relying on the setup, ask:
 
-- Is the wallet using shielded Zcash addresses where appropriate?
-- Is NymVPN visibly connected before the wallet starts network activity?
+- Am I using shielded Zcash addresses where appropriate?
+- Does my wallet have native Nym support?
+- If so, exactly which traffic does that native integration protect?
+- If I need broader coverage, is NymVPN connected before the wallet starts network activity?
 - Is the wallet excluded by a split-tunneling rule?
-- Am I relying on a wallet-specific proxy feature that has actually been documented?
-- Am I leaking identity through an exchange account, browser session, or other third-party API?
+- Am I relying on a proxy mode that the wallet actually documents?
+- Am I leaking identity through an exchange, browser session, third-party API, or transparent address?
 - Am I prepared for slower sync and occasional timeouts?
 
 ## Sources
 
-- Nym Mixnet traffic flow: https://nym.com/docs/network/mixnet-mode/traffic-flow
-- NymVPN Mixnet Tuning: https://nym.com/blog/mixnet-tuning
-- NymVPN v2026.11 platform/version information: https://nym.com/blog/nymvpn-v2026.11
-- NymVPN dApp/wallet mode: https://nym.com/blog/nymvpn-v2026.2
-- Nym dApp mode overview: https://nym.com/blog/nymvpn-dapp-mode
+- Nym: Nym mixnet now live in Zcash wallets, September 24, 2026: https://nym.com/blog/nym-mixnet-zcash-wallets
+- Zingo PC repository and Nym behavior: https://github.com/zingolabs/zingo-pc
+- Zkool repository: https://github.com/mladenmarkov/zkool
+- NymVPN v2026.12: https://nym.com/blog/nymvpn-v2026.12
 - Zodl Tor Protection: https://support.zodl.com/article/17-enabling-tor-protection
-- Zodl wallet recovery and Tor sync option: https://support.zodl.com/article/13-recovering-your-zodl-wallet
-- Zodl ecosystem page: https://z.cash/ecosystem/zodl-wallet/
-- Zkool project (YWallet successor): https://github.com/mladenmarkov/zkool
