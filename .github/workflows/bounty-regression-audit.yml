@@ -1,0 +1,25 @@
+name: bounty-regression-audit
+on:
+  push:
+    branches:
+      - fix-nym-guide-ci-cleanup
+    paths:
+      - ".github/workflows/bounty-regression-audit.yml"
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix-nym-guide-ci-cleanup
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verify link-health bounty regression
+        run: node link-health/check-links.test.mjs
+      - name: Verify alt-text bounty parser
+        run: node scripts/check-image-alt-text.test.mjs
+      - name: Verify alt-text report executes
+        run: node scripts/check-image-alt-text.mjs > /tmp/alt-report.txt
