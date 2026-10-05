@@ -1,0 +1,47 @@
+name: nym-guide-ci-repair
+on:
+  push:
+    branches:
+      - fix-nym-guide-ci-cleanup
+    paths:
+      - ".github/workflows/nym-guide-ci-repair.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix-nym-guide-ci-cleanup
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Fetch upstream main
+        run: |
+          git remote add upstream https://github.com/ZecHub/zechub.git || true
+          git fetch upstream main --depth=1
+      - name: Regenerate menu titles
+        run: |
+          node translation/gen-menu-titles.mjs
+          git status --short
+          if ! git diff --quiet -- translation/menu-titles/en.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add translation/menu-titles/en.json
+            git commit -m "chore: regenerate menu titles [skip ci]"
+            git push origin HEAD:fix-nym-guide-ci-cleanup
+          fi
+      - name: Check menu title freshness
+        run: node translation/gen-menu-titles.mjs --check
+      - name: Check protected terms and brand spelling
+        run: |
+          node scripts/check-protected-terms.mjs --base upstream/main
+          node scripts/check-brand-spelling.mjs --base upstream/main
+      - name: Run relevant translation invariants
+        run: |
+          node translation/check-invariants.mjs --base upstream/main
+          node scripts/check-frontmatter.mjs --base upstream/main
